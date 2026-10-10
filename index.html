@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Etiquetas Bunker</title>
+<style id="dyn"></style>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f3f4f6; color:#111827; font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .wrap { max-width:1100px; margin:0 auto; padding:20px 16px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:#6b7280; margin:0 0 16px; }
+  .card { background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px; margin-bottom:14px; }
+  .cfg { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+  .cfg div { display:flex; flex-direction:column; }
+  label { font-size:12px; font-weight:600; color:#374151; margin-bottom:4px; }
+  input { padding:8px; border:1px solid #d1d5db; border-radius:5px; font:inherit; }
+  .cfg input { width:100px; }
+  #busca { width:100%; font-size:16px; padding:10px; }
+  .lista { max-height:360px; overflow:auto; margin-top:10px; border-top:1px solid #f3f4f6; }
+  .it { display:flex; align-items:center; gap:10px; padding:7px 4px; border-bottom:1px solid #f3f4f6; }
+  .it .n { flex:1; } .it .s { color:#6b7280; font:12px ui-monospace,monospace; }
+  .it input { width:80px; text-align:right; }
+  .it.on { background:#ecfdf5; }
+  @media (max-width:600px) { .it { flex-wrap:wrap; } .it .n { flex-basis:100%; } .it .s { flex:1; } }
+  button { padding:9px 16px; border:none; border-radius:5px; font:inherit; font-weight:600; cursor:pointer; background:#2563eb; color:#fff; }
+  button.pr { background:#10b981; } button.lt { background:#e5e7eb; color:#111827; }
+  .bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .tot { color:#374151; font-weight:600; }
+  #area { display:flex; flex-direction:column; align-items:flex-start; overflow-x:auto; max-width:100%; gap:8px; padding-bottom:40px; }
+  .row { display:flex; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .cell { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; padding:1mm; text-align:center; color:#000; min-width:0; }
+  .cell .nm { font-weight:700; line-height:1.1; width:100%; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .cell svg { max-width:95%; }
+  .cell .cd { font-family:ui-monospace,monospace; letter-spacing:1px; }
+  .vazio { color:#6b7280; padding:10px 4px; }
+  @media print {
+    .no-print { display:none !important; }
+    body { background:transparent; }
+    .wrap { padding:0; max-width:none; }
+    #area { padding:0; gap:0; align-items:flex-start; }
+    .row { box-shadow:none; break-after:page; page-break-after:always; break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+ <div class="no-print">
+  <h1>Etiquetas Bunker</h1>
+  <p class="sub">Busque o produto, coloque quantas etiquetas quer e clique em Imprimir. Ajuste a impressora abaixo se precisar.</p>
+
+  <div class="card">
+   <div class="cfg">
+    <div><label>Colunas</label><input type="number" id="cols" min="1" max="6" value="2"></div>
+    <div><label>Largura bobina (mm)</label><input type="number" id="pw" value="102" title="Largura total do papel, somando todas as colunas"></div>
+    <div><label>Altura etiqueta (mm)</label><input type="number" id="ph" value="30"></div>
+    <div><label>Espaço entre colunas (mm)</label><input type="number" id="gap" value="2"></div>
+    <div><label>Margem lateral (mm)</label><input type="number" id="mx" value="0"></div>
+    <div><label>Tamanho do nome (pt)</label><input type="number" id="fs" value="8"></div>
+    <button class="lt" id="reset">Padrão</button>
+   </div>
+  </div>
+
+  <div class="card">
+   <input id="busca" placeholder="Buscar por nome, SKU ou código de barras…" autocomplete="off">
+   <div class="lista" id="lista"></div>
+  </div>
+
+  <div class="card bar">
+   <span class="tot" id="tot">Nenhuma etiqueta</span>
+   <button class="lt" id="limpar">Limpar quantidades</button>
+   <button class="pr" id="print">Imprimir</button>
+  </div>
+  <p class="sub">Pré-visualização:</p>
+ </div>
+ <div id="area"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script>
+const PRODUTOS = [{"sku": "2SDfasnk-1", "nome": "AJU - LIQ FB - Knowledge - 30 - 06mg/mL", "gtin": "9520584202153"}, {"sku": "2SDfasnk-2", "nome": "AJU - LIQ FB - Knowledge - 30 - 03mg/mL", "gtin": "9520584202252"}, {"sku": "2SDfasnk-3", "nome": "AJU - LIQ FB - Knowledge - 30 - 00mg/mL", "gtin": "9520584202054"}, {"sku": "3SFE6G5MY-30-25mg", "nome": "LVP - LIQ NS - Cigare - 30 - 25mg/mL", "gtin": "9839630809599"}, {"sku": "3SFE6G5MY-30-50mg", "nome": "LVP - LIQ NS - Cigare - 30 - 50mg/mL", "gtin": "9839630509598"}, {"sku": "412fassjahb-1", "nome": "AJU - LIQ FB - Freedom - 30 - 06mg/mL", "gtin": "9520584865433"}, {"sku": "412fassjahb-2", "nome": "AJU - LIQ FB - Freedom - 30 - 03mg/mL", "gtin": "9520984863251"}, {"sku": "412fassjahb-3", "nome": "AJU - LIQ FB - Freedom - 30 - 00mg/mL", "gtin": "9520584863255"}, {"sku": "58U6PBXUM-1", "nome": "LVP - LIQ NS - Rustique - 30 - 50mg/mL", "gtin": "9831630830382"}, {"sku": "58U6PBXUM-2", "nome": "LVP - LIQ NS - Rustique - 30 - 25mg/mL", "gtin": "9839630830388"}, {"sku": "58U6PBXUM-3", "nome": "LVP - LIQ NS - Rustique - 30 - 35mg/mL", "gtin": "9739630831388"}, {"sku": "65XTCDZ2F-1", "nome": "LJU - LIQ FB - Rom a com Caramelo - 30 - 06mg/mL", "gtin": "6154398204121"}, {"sku": "65XTCDZ2F-2", "nome": "LJU - LIQ FB - Rom a com Caramelo - 30 - 03mg/mL", "gtin": "6133895304121"}, {"sku": "65XTCDZ2F-3", "nome": "LJU - LIQ FB - Rom a com Caramelo - 30 - 00mg/mL", "gtin": "6133898204121"}, {"sku": "8EXZEL99F-1", "nome": "LVP - LIQ FB - Berry Muffin - 30 - 06mg/mL", "gtin": "7892256463462"}, {"sku": "8EXZEL99F-2", "nome": "LVP - LIQ FB - Berry Muffin - 30 - 03mg/mL", "gtin": "2021894232108"}, {"sku": "8EXZEL99F-3", "nome": "LVP - LIQ FB - Berry Muffin - 30 - 00mg/mL", "gtin": "5432194241016"}, {"sku": "8FZKZTFSF-1", "nome": "LJU - LIQ FB - Caubóizinho - 30 - 06mg/mL", "gtin": "8315360240303"}, {"sku": "8FZKZTFSF-2", "nome": "LJU - LIQ FB - Caubóizinho - 30 - 03mg/mL", "gtin": "8123360222027"}, {"sku": "8FZKZTFSF-3", "nome": "LJU - LIQ FB - Caubóizinho - 30 - 00mg/mL", "gtin": "8315360222026"}, {"sku": "9WJNTX6YX-30-00mg", "nome": "LJU - LIQ FB - Halls Preto - 30 - 00mg/mL", "gtin": "8204010076891"}, {"sku": "9WJNTX6YX-30-03mg", "nome": "LJU - LIQ FB - Halls Preto - 30 - 03mg/mL", "gtin": "8204013526898"}, {"sku": "9WJNTX6YX-30-06mg", "nome": "LJU - LIQ FB - Halls Preto - 30 - 06mg/mL", "gtin": "8204100732195"}, {"sku": "9WV8QGUNM-1", "nome": "LJU - LIQ FB - MMP - 30 - 06mg/mL", "gtin": "2135448632570"}, {"sku": "9WV8QGUNM-2", "nome": "LJU - LIQ FB - MMP - 30 - 03mg/mL", "gtin": "2132148632596"}, {"sku": "9WV8QGUNM-3", "nome": "LJU - LIQ FB - MMP - 30 - 00mg/mL", "gtin": "2125848632584"}, {"sku": "AEE4UUN5T-30-00mg", "nome": "LJU - LIQ FB - Halls de Melancia - 30 - 00mg/mL", "gtin": "6054334846166"}, {"sku": "AEE4UUN5T-30-03mg", "nome": "LJU - LIQ FB - Halls de Melancia - 30 - 03mg/mL", "gtin": "2025734846166"}, {"sku": "AEE4UUN5T-30-06mg", "nome": "LJU - LIQ FB - Halls de Melancia - 30 - 06mg/mL", "gtin": "6025734543160"}, {"sku": "AGG82HNB5-1", "nome": "LVP - LIQ NS - Vanille - 30 - 50mg/mL", "gtin": "9830037809595"}, {"sku": "AGG82HNB5-2", "nome": "LVP - LIQ NS - Vanille - 30 - 25mg/mL", "gtin": "9830038809594"}, {"sku": "AGG82HNB5-3", "nome": "LVP - LIQ NS - Vanille - 30 - 35mg/mL", "gtin": "2976316485467"}, {"sku": "AJNFKA5123v-30-00mg", "nome": "TJU - LIQ FB - Cherry Ice - 30 - 00mg/mL", "gtin": "2189190391902"}, {"sku": "AJNFKA5123v-30-03mg", "nome": "TJU - LIQ FB - Cherry Ice - 30 - 03mg/mL", "gtin": "2189202091905"}, {"sku": "AJNFKA5123v-30-06mg", "nome": "TJU - LIQ FB - Cherry Ice - 30 - 06mg/mL", "gtin": "2189383800990"}, {"sku": "AKNW84fs65-30-00mg", "nome": "TJU - LIQ FB - Apple Ice - 30 - 00mg/mL", "gtin": "6982045619321"}, {"sku": "AKNW84fs65-30-03mg", "nome": "TJU - LIQ FB - Apple Ice - 30 - 03mg/mL", "gtin": "6982045619338"}, {"sku": "AKNW84fs65-30-06mg", "nome": "TJU - LIQ FB - Apple Ice - 30 - 06mg/mL", "gtin": "6982045619314"}, {"sku": "ALKFJNWOI88-30-00mg", "nome": "TJU - LIQ FB - Red Blend - 30 - 00mg/mL", "gtin": "6543215927716"}, {"sku": "ALKFJNWOI88-30-03mg", "nome": "TJU - LIQ FB - Red Blend - 30 - 03mg/mL", "gtin": "6543215955160"}, {"sku": "ALKFJNWOI88-30-06mg", "nome": "TJU - LIQ FB - Red Blend - 30 - 06mg/mL", "gtin": "6543215920014"}, {"sku": "AMJFa5641-1", "nome": "TJU - LIQ FB - Peach - 30 - 06mg/mL", "gtin": "8209855523326"}, {"sku": "AMJFa5641-2", "nome": "TJU - LIQ FB - Peach - 30 - 03mg/mL", "gtin": "8209855520929"}, {"sku": "AMJFa5641-3", "nome": "TJU - LIQ FB - Peach - 30 - 00mg/mL", "gtin": "8909855523325"}, {"sku": "AMJFa5641-4", "nome": "TJU - LIQ FB - Peach - 30 - 09mg/mL", "gtin": "5268913486549"}, {"sku": "ANJFK5613fs2-1", "nome": "TJU - LIQ FB - Grape Ice - 30 - 06mg/mL", "gtin": "2072490391904"}, {"sku": "ANJFK5613fs2-2", "nome": "TJU - LIQ FB - Grape Ice - 30 - 03mg/mL", "gtin": "2072390391905"}, {"sku": "ANJFK5613fs2-3", "nome": "TJU - LIQ FB - Grape Ice - 30 - 00mg/mL", "gtin": "2072190391907"}, {"sku": "ASF213f5s-1", "nome": "TJU - LIQ FB - Nana Nice - 30 - 06mg/mL", "gtin": "8233855523727"}, {"sku": "ASF213f5s-2", "nome": "TJU - LIQ FB - Nana Nice - 30 - 03mg/mL", "gtin": "8233855523734"}, {"sku": "ASF213f5s-3", "nome": "TJU - LIQ FB - Nana Nice - 30 - 00mg/mL", "gtin": "8233855598725"}, {"sku": "AUIFHnkfa2s1-1", "nome": "LJU - LIQ FB - Tabaco Doce - 30 - 06mg/mL", "gtin": "6321007450235"}, {"sku": "AUIFHnkfa2s1-2", "nome": "LJU - LIQ FB - Tabaco Doce - 30 - 03mg/mL", "gtin": "6161547450230"}, {"sku": "AUIFHnkfa2s1-3", "nome": "LJU - LIQ FB - Tabaco Doce - 30 - 00mg/mL", "gtin": "6161007450237"}, {"sku": "B4HNXBLVS-1", "nome": "LJU - LIQ FB - Avel a - 30 - 06mg/mL", "gtin": "9876543230126"}, {"sku": "B4HNXBLVS-2", "nome": "LJU - LIQ FB - Avel a - 30 - 03mg/mL", "gtin": "9876543220127"}, {"sku": "B4HNXBLVS-3", "nome": "LJU - LIQ FB - Avel a - 30 - 00mg/mL", "gtin": "9876543210128"}, {"sku": "BKL-BOX-APX-1-03MG", "nome": "Box My Vape com 8 Apex - Edição Limitada | Bunker Labs - 03mg/mL", "gtin": "2404063038037"}, {"sku": "BKL-BOX-APX-1-06MG", "nome": "Box My Vape com 8 Apex - Edição Limitada | Bunker Labs - 06mg/mL", "gtin": "2455063038039"}, {"sku": "BKL-BOX-LSJ-1-06mg-ml", "nome": "Box My Vape c/ 10 LS Juices - Edição Limitada | Bunker Labs - 06mg/mL", "gtin": "2104063038333"}, {"sku": "BKL-BOX-TST-1-03MG", "nome": "Box My Vape c/ 10 Trust Juices - Edição Limitada | Bunker Labs - 03mg/mL", "gtin": "3044063038331"}, {"sku": "BKL-BOX-TST-1-06MG", "nome": "Box My Vape c/ 10 Trust Juices - Edição Limitada | Bunker Labs - 06mg/mL", "gtin": "3044063088336"}, {"sku": "BKL-BOX-VAR-1-03MG", "nome": "Box My Vape c/ 10 Juices - Edição Limitada | Bunker Labs - 03mg/mL", "gtin": "7114063438533"}, {"sku": "BKL-BOX-VAR-1-06MG", "nome": "Box My Vape c/ 10 Juices - Edição Limitada | Bunker Labs - 06mg/mL", "gtin": "8114063438532"}, {"sku": "CSN-BBT-LIQ-1", "nome": "CNO - LIQ FB - Bourbon Tobacco - 30 - 00mg/mL", "gtin": "7060533658225"}, {"sku": "CSN-BBT-LIQ-2", "nome": "CNO - LIQ FB - Bourbon Tobacco - 30 - 03mg/mL", "gtin": "7065533658220"}, {"sku": "CSN-BBT-LIQ-3", "nome": "CNO - LIQ FB - Bourbon Tobacco - 30 - 06mg/mL", "gtin": "7060533652223"}, {"sku": "CSN-BBT-LIQ-4", "nome": "CNO - LIQ FB - Bourbon Tobacco - 30 - 09mg/mL", "gtin": "6160533653228"}, {"sku": "CSN-BBT-LIQ-5", "nome": "CNO - LIQ FB - Bourbon Tobacco - 30 - 12mg/mL", "gtin": "7660533658821"}, {"sku": "CSN-CVT-LIQ-1", "nome": "CNO - LIQ FB - Clove Tobacco - 30 - 00mg/mL", "gtin": "8060533658828"}, {"sku": "CSN-CVT-LIQ-2", "nome": "CNO - LIQ FB - Clove Tobacco - 30 - 03mg/mL", "gtin": "8065533658823"}, {"sku": "CSN-CVT-LIQ-3", "nome": "CNO - LIQ FB - Clove Tobacco - 30 - 06mg/mL", "gtin": "8860533658824"}, {"sku": "CSN-CVT-LIQ-4", "nome": "CNO - LIQ FB - Clove Tobacco - 30 - 09mg/mL", "gtin": "7895213698747"}, {"sku": "CSN-CVT-LIQ-5", "nome": "CNO - LIQ FB - Clove Tobacco - 30 - 12mg/mL", "gtin": "8660533655829"}, {"sku": "CSN-GDT-LIQ-1", "nome": "CNO - LIQ FB - Gold Tobacco - 30 - 00mg/mL", "gtin": "9065536658829"}, {"sku": "CSN-GDT-LIQ-2", "nome": "CNO - LIQ FB - Gold Tobacco - 30 - 03mg/mL", "gtin": "9665536658821"}, {"sku": "CSN-GDT-LIQ-3", "nome": "CNO - LIQ FB - Gold Tobacco - 30 - 06mg/mL", "gtin": "9765536655827"}, {"sku": "CSN-GDT-LIQ-4", "nome": "CNO - LIQ FB - Gold Tobacco - 30 - 09mg/mL", "gtin": "5863247852130"}, {"sku": "CSN-GDT-LIQ-5", "nome": "CNO - LIQ FB - Gold Tobacco - 30 - 12mg/mL", "gtin": "9965556655825"}, {"sku": "CSN-MTT-LIQ-1", "nome": "CNO - LIQ FB - Menthol Tobacco - 30 - 00mg/mL", "gtin": "5665539653872"}, {"sku": "CSN-MTT-LIQ-2", "nome": "CNO - LIQ FB - Menthol Tobacco - 30 - 03mg/mL", "gtin": "5765539623872"}, {"sku": "CSN-MTT-LIQ-3", "nome": "CNO - LIQ FB - Menthol Tobacco - 30 - 06mg/mL", "gtin": "5565539633877"}, {"sku": "CSN-MTT-LIQ-4", "nome": "CNO - LIQ FB - Menthol Tobacco - 30 - 09mg/mL", "gtin": "9875231458798"}, {"sku": "CSN-MTT-LIQ-5", "nome": "CNO - LIQ FB - Menthol Tobacco - 30 - 12mg/mL", "gtin": "5965539553777"}, {"sku": "CSN-SPT-LIQ-1", "nome": "CNO - LIQ FB - Spiced Tobacco - 30 - 00mg/mL", "gtin": "4265939653277"}, {"sku": "CSN-SPT-LIQ-2", "nome": "CNO - LIQ FB - Spiced Tobacco - 30 - 03mg/mL", "gtin": "4765939653272"}, {"sku": "CSN-SPT-LIQ-3", "nome": "CNO - LIQ FB - Spiced Tobacco - 30 - 06mg/mL", "gtin": "4264939643271"}, {"sku": "CSN-SPT-LIQ-4", "nome": "CNO - LIQ FB - Spiced Tobacco - 30 - 09mg/mL", "gtin": "3568972145855"}, {"sku": "CSN-SPT-LIQ-5", "nome": "CNO - LIQ FB - Spiced Tobacco - 30 - 12mg/mL", "gtin": "4969939653274"}, {"sku": "D52G4SASWA-1", "nome": "TJU - LIQ FB - Gela Guela - 30 - 06mg/mL", "gtin": "6954190389909"}, {"sku": "D52G4SASWA-2", "nome": "TJU - LIQ FB - Gela Guela - 30 - 03mg/mL", "gtin": "6954190392909"}, {"sku": "D52G4SASWA-3", "nome": "TJU - LIQ FB - Gela Guela - 30 - 00mg/mL", "gtin": "6954190391902"}, {"sku": "DD9PTHEWD-30-00mg", "nome": "LJU - LIQ FB - Surpresa de Frutas - 30 - 00mg/mL", "gtin": "6953216492524"}, {"sku": "DD9PTHEWD-30-03mg", "nome": "LJU - LIQ FB - Surpresa de Frutas - 30 - 03mg/mL", "gtin": "5433216492522"}, {"sku": "DD9PTHEWD-30-06mg", "nome": "LJU - LIQ FB - Surpresa de Frutas - 30 - 06mg/mL", "gtin": "9873216492522"}, {"sku": "DEV8M9F8T-1", "nome": "LVP - LIQ NS - Pomme - 30 - 50mg/mL", "gtin": "9876321210951"}, {"sku": "DEV8M9F8T-2", "nome": "LVP - LIQ NS - Pomme - 30 - 25mg/mL", "gtin": "9876321200952"}, {"sku": "DEV8M9F8T-3", "nome": "LVP - LIQ NS - Pomme - 30 - 35mg/mL", "gtin": "2976316485481"}, {"sku": "DRR9QW9U4-1", "nome": "LJU - LIQ FB - Cereal ao Leite - 30 - 06mg/mL", "gtin": "6546850909246"}, {"sku": "DRR9QW9U4-2", "nome": "LJU - LIQ FB - Cereal ao Leite - 30 - 03mg/mL", "gtin": "8546812309242"}, {"sku": "DRR9QW9U4-3", "nome": "LJU - LIQ FB - Cereal ao Leite - 30 - 00mg/mL", "gtin": "8546850909244"}, {"sku": "ETB-JNS-EXM-1", "nome": "EBL - LIQ NS - Exclusive Mint - 30 - 35mg/mL", "gtin": "7895071369070"}, {"sku": "ETB-JNS-EXM-2", "nome": "EBL - LIQ NS - Exclusive Mint - 30 - 50mg/mL", "gtin": "7891011942006"}, {"sku": "FHCDKVEUX-1", "nome": "LVP - LIQ FB - Sunday Ride - 30 - 06mg/mL", "gtin": "2020250214741"}, {"sku": "FHCDKVEUX-2", "nome": "LVP - LIQ FB - Sunday Ride - 30 - 00mg/mL", "gtin": "2020250215748"}, {"sku": "FHCDKVEUX-3", "nome": "LVP - LIQ FB - Sunday Ride - 30 - 03mg/mL", "gtin": "5289316478740"}, {"sku": "FSAfas545sf-1", "nome": "AJU - LIQ FB - Strenght Tobacco - 30 - 06mg/mL", "gtin": "9877884202155"}, {"sku": "FSAfas545sf-2", "nome": "AJU - LIQ FB - Strenght Tobacco - 30 - 03mg/mL", "gtin": "9876984202256"}, {"sku": "FSAfas545sf-3", "nome": "AJU - LIQ FB - Strenght Tobacco - 30 - 00mg/mL", "gtin": "9876984202157"}, {"sku": "G2THYLKVK-1", "nome": "LVP - LIQ FB - Sand - 30 - 06mg/mL", "gtin": "7893568320214"}, {"sku": "G2THYLKVK-2", "nome": "LVP - LIQ FB - Sand - 30 - 03mg/mL", "gtin": "7893669320212"}, {"sku": "G2THYLKVK-3", "nome": "LVP - LIQ FB - Sand - 30 - 00mg/mL", "gtin": "7893668320213"}, {"sku": "GKQ3JY9BR-1", "nome": "LJU - LIQ FB - Biscoito de Lim ao - 30 - 06mg/mL", "gtin": "7720200315720"}, {"sku": "GKQ3JY9BR-2", "nome": "LJU - LIQ FB - Biscoito de Lim ao - 30 - 03mg/mL", "gtin": "7707354615722"}, {"sku": "GKQ3JY9BR-3", "nome": "LJU - LIQ FB - Biscoito de Lim ao - 30 - 00mg/mL", "gtin": "7707300315720"}, {"sku": "HE5EFGL34-1", "nome": "LVP - LIQ FB - Rainbow - 30 - 06mg/mL", "gtin": "6982091202102"}, {"sku": "HE5EFGL34-2", "nome": "LVP - LIQ FB - Rainbow - 30 - 03mg/mL", "gtin": "3261291202109"}, {"sku": "HE5EFGL34-3", "nome": "LVP - LIQ FB - Rainbow - 30 - 00mg/mL", "gtin": "6921291202109"}, {"sku": "JNFWKA521f3s-30-00mg", "nome": "TJU - LIQ FB - Biscoito Amanteigado - 30 - 00mg/mL", "gtin": "9911005029600"}, {"sku": "JNFWKA521f3s-30-03mg", "nome": "TJU - LIQ FB - Biscoito Amanteigado - 30 - 03mg/mL", "gtin": "9911105029609"}, {"sku": "JNFWKA521f3s-30-06mg", "nome": "TJU - LIQ FB - Biscoito Amanteigado - 30 - 06mg/mL", "gtin": "9912105029606"}, {"sku": "KAFNk56af-1", "nome": "AJU - LIQ FB - Patience - 30 - 06mg/mL", "gtin": "9520989202154"}, {"sku": "KAFNk56af-2", "nome": "AJU - LIQ FB - Patience - 30 - 03mg/mL", "gtin": "9520974202152"}, {"sku": "KAFNk56af-3", "nome": "AJU - LIQ FB - Patience - 30 - 00mg/mL", "gtin": "9520984202159"}, {"sku": "KDM6HQXZJ-30-06mg", "nome": "LVP - LIQ FB - Time Travel - 30 - 06mg/mL", "gtin": "7773300315725"}, {"sku": "KW7BLBLGP-1", "nome": "LVP - LIQ FB - Refresh - 30 - 06mg/mL", "gtin": "5432789123833"}, {"sku": "KW7BLBLGP-3", "nome": "LVP - LIQ FB - Refresh - 30 - 00mg/mL", "gtin": "5432789366834"}, {"sku": "KZ3ZQD5PN-1", "nome": "LVP - LIQ FB - Red Devil - 30 - 06mg/mL", "gtin": "3571854321933"}, {"sku": "KZ3ZQD5PN-2", "nome": "LVP - LIQ FB - Red Devil - 30 - 00mg/mL", "gtin": "6971854321938"}, {"sku": "LAKJFWOI87-1", "nome": "TJU - LIQ FB - Tabaco Nuts - 30 - 06mg/mL", "gtin": "9863555523728"}, {"sku": "LAKJFWOI87-2", "nome": "TJU - LIQ FB - Tabaco Nuts - 30 - 03mg/mL", "gtin": "9763555523721"}, {"sku": "LAKJFWOI87-3", "nome": "TJU - LIQ FB - Tabaco Nuts - 30 - 00mg/mL", "gtin": "9863566523724"}, {"sku": "LAKJFWOI87-4", "nome": "TJU - LIQ FB - Tabaco Nuts - 30 - 09mg/mL", "gtin": "2569875623663"}, {"sku": "LH8GZXWUA-1", "nome": "LVP - LIQ NS - Froid - 30 - 50mg/mL", "gtin": "9882321283055"}, {"sku": "LH8GZXWUA-2", "nome": "LVP - LIQ NS - Froid - 30 - 25mg/mL", "gtin": "9882321280955"}, {"sku": "LH8GZXWUA-3", "nome": "LVP - LIQ NS - Froid - 30 - 35mg/mL", "gtin": "9682323280959"}, {"sku": "M8YN5CAEV-30-03mg", "nome": "LVP - LIQ FB - Refresh - 30 - 03mg/mL", "gtin": "6542789366839"}, {"sku": "MFC7FHV66", "nome": "LVP - LIQ FB - Banana Nuts", "gtin": "2021894241018"}, {"sku": "MFC7FHV66-1", "nome": "LVP - LIQ FB - Banana Nuts - 30 - 06mg/mL", "gtin": "2020203040502"}, {"sku": "MFC7FHV66-2", "nome": "LVP - LIQ FB - Banana Nuts - 30 - 03mg/mL", "gtin": "2021894241018"}, {"sku": "MFC7FHV66-3", "nome": "LVP - LIQ FB - Banana Nuts - 30 - 00mg/mL", "gtin": "3030894241019"}, {"sku": "N87NVSRUM-1", "nome": "LJU - LIQ FB - Sorvete de Avel a - 30 - 06mg/mL", "gtin": "9787007455439"}, {"sku": "N87NVSRUM-2", "nome": "LJU - LIQ FB - Sorvete de Avel a - 30 - 03mg/mL", "gtin": "9857007450236"}, {"sku": "N87NVSRUM-3", "nome": "LJU - LIQ FB - Sorvete de Avel a - 30 - 00mg/mL", "gtin": "9787007450236"}, {"sku": "NDKAL4a1f52-30-00mg", "nome": "LJU - LIQ FB - Tribeca - 30 - 00mg/mL", "gtin": "4321010076899"}, {"sku": "NDKAL4a1f52-30-03mg", "nome": "LJU - LIQ FB - Tribeca - 30 - 03mg/mL", "gtin": "4321019876896"}, {"sku": "NDKAL4a1f52-30-06mg", "nome": "LJU - LIQ FB - Tribeca - 30 - 06mg/mL", "gtin": "6100100768900"}, {"sku": "NT4MT9JN2-1", "nome": "LJU - LIQ FB - Caubói - 30 - 06mg/mL", "gtin": "8389760221323"}, {"sku": "NT4MT9JN2-2", "nome": "LJU - LIQ FB - Caubói - 30 - 03mg/mL", "gtin": "8321360546321"}, {"sku": "NT4MT9JN2-3", "nome": "LJU - LIQ FB - Caubói - 30 - 00mg/mL", "gtin": "8321360221327"}, {"sku": "P9AGQ3776-2", "nome": "LVP - LIQ FB - Time Travel - 30 - 00mg/mL", "gtin": "7773300315749"}, {"sku": "PTRFLIQVP-00MG", "nome": "PAT - LIQ FB - Vanilla Pudding - 30 - 00mg/mL", "gtin": "9802314578968"}, {"sku": "PTRFLIQVP-03MG", "nome": "PAT - LIQ FB - Vanilla Pudding - 30 - 03mg/mL", "gtin": "5471065897549"}, {"sku": "Q6T9DFPL4-1", "nome": "LVP - LIQ FB - Romantic - 30 - 06mg/mL", "gtin": "5435439366819"}, {"sku": "Q6T9DFPL4-2", "nome": "LVP - LIQ FB - Romantic - 30 - 00mg/mL", "gtin": "5435439366833"}, {"sku": "Q6T9DFPL4-30-03mg-l", "nome": "LVP - LIQ FB - Romantic - 30 - 03mg/mL", "gtin": "4435439266837"}, {"sku": "QFCSVP3WW-1", "nome": "LVP - LIQ FB - Lovers - 30 - 06mg/mL", "gtin": "5438942434372"}, {"sku": "QFCSVP3WW-2", "nome": "LVP - LIQ FB - Lovers - 30 - 03mg/mL", "gtin": "5432542419371"}, {"sku": "QFCSVP3WW-3", "nome": "LVP - LIQ FB - Lovers - 30 - 00mg/mL", "gtin": "5438942219375"}, {"sku": "QUWfs5a46-1", "nome": "AJU - LIQ FB - Truth - 30 - 06mg/mL", "gtin": "9876984201150"}, {"sku": "QUWfs5a46-2", "nome": "AJU - LIQ FB - Truth - 30 - 03mg/mL", "gtin": "9876984201051"}, {"sku": "QUWfs5a46-3", "nome": "AJU - LIQ FB - Truth - 30 - 00mg/mL", "gtin": "9876984200955"}, {"sku": "RE7FBWR85-1", "nome": "LVP - LIQ FB - Summer Day - 30 - 06mg/mL", "gtin": "3217250214744"}, {"sku": "RE7FBWR85-2", "nome": "LVP - LIQ FB - Summer Day - 30 - 03mg/mL", "gtin": "3217260215748"}, {"sku": "RE7FBWR85-3", "nome": "LVP - LIQ FB - Summer Day - 30 - 00mg/mL", "gtin": "3217250215741"}, {"sku": "RZP86BPRC-1", "nome": "LJU - LIQ FB - Creme Brulee - 30 - 06mg/mL", "gtin": "9865494241930"}, {"sku": "RZP86BPRC-2", "nome": "LJU - LIQ FB - Creme Brulee - 30 - 03mg/mL", "gtin": "9876893211936"}, {"sku": "RZP86BPRC-3", "nome": "LJU - LIQ FB - Creme Brulee - 30 - 00mg/mL", "gtin": "9876894241932"}, {"sku": "SF7SHEVR5-1", "nome": "LVP - LIQ FB - All In - 30 - 06mg/mL", "gtin": "6971894242026"}, {"sku": "SF7SHEVR5-2", "nome": "LVP - LIQ FB - All In - 30 - 03mg/mL", "gtin": "2004894241011"}, {"sku": "SF7SHEVR5-3", "nome": "LVP - LIQ FB - All In - 30 - 00mg/mL", "gtin": "8204894241019"}, {"sku": "SFJNK521a-1", "nome": "AJU - LIQ FB - Harmony - 30 - 06mg/mL", "gtin": "9520584201057"}, {"sku": "SFJNK521a-2", "nome": "AJU - LIQ FB - Harmony - 30 - 03mg/mL", "gtin": "9520584200951"}, {"sku": "SFJNK521a-3", "nome": "AJU - LIQ FB - Harmony - 30 - 00mg/mL", "gtin": "9520584200852"}, {"sku": "SHP-LQS-3-TRU-1-TH-30ML-1-TN-00MG", "nome": "TJU - LIQ FB - Manga - 30 - 06mg/mL", "gtin": "4935504814142"}, {"sku": "SHP-LQS-3-TRU-1-TH-30ML-1-TN-03MG", "nome": "TJU - LIQ FB - Manga - 30 - 03mg/mL", "gtin": "9935504814147"}, {"sku": "SHP-LQS-3-TRU-1-TH-30ML-1-TN-06MG", "nome": "TJU - LIQ FB - Manga - 30 - 00mg/mL", "gtin": "9035504814540"}, {"sku": "SHP-LQS-3-TRU-2-TH-30ML-1-TN-00MG", "nome": "TJU - LIQ FB - Merengue de Abacaxi - 30 - 06mg/mL", "gtin": "9030004814144"}, {"sku": "SHP-LQS-3-TRU-2-TH-30ML-1-TN-03MG", "nome": "TJU - LIQ FB - Merengue de Abacaxi - 30 - 03mg/mL", "gtin": "2030004814141"}, {"sku": "SHP-LQS-3-TRU-2-TH-30ML-1-TN-06MG", "nome": "TJU - LIQ FB - Merengue de Abacaxi - 30 - 00mg/mL", "gtin": "1030004814142"}, {"sku": "SHP-LQS-3-TRU-3-TH-30ML-1-TN-00MG", "nome": "TJU - LIQ FB - Strawberry Cheesecake - 30 - 00mg/mL", "gtin": "6635504114140"}, {"sku": "SHP-LQS-3-TRU-3-TH-30ML-1-TN-03MG", "nome": "TJU - LIQ FB - Strawberry Cheesecake - 30 - 03mg/mL", "gtin": "3035504114141"}, {"sku": "SHP-LQS-3-TRU-3-TH-30ML-1-TN-06MG", "nome": "TJU - LIQ FB - Strawberry Cheesecake - 30 - 06mg/mL", "gtin": "7035504114147"}, {"sku": "SHP-LQS-3-TRU-4-TH-30ML-1-TN-00MG", "nome": "TJU - LIQ FB - Strawberry Ice - 30 - 00mg/mL", "gtin": "8065544816168"}, {"sku": "SHP-LQS-3-TRU-4-TH-30ML-1-TN-03MG", "nome": "TJU - LIQ FB - Strawberry Ice - 30 - 03mg/mL", "gtin": "7065544816169"}, {"sku": "SHP-LQS-3-TRU-4-TH-30ML-1-TN-06MG", "nome": "TJU - LIQ FB - Strawberry Ice - 30 - 06mg/mL", "gtin": "6065544816160"}, {"sku": "SHP-LQS-3-TRU-5-TH-30ML-1-TN-00MG", "nome": "TJU - LIQ FB - Suculenta de Uva - 30 - 00mg/mL", "gtin": "5230004814142"}, {"sku": "SHP-LQS-3-TRU-5-TH-30ML-1-TN-03MG", "nome": "TJU - LIQ FB - Suculenta de Uva - 30 - 03mg/mL", "gtin": "5030104814147"}, {"sku": "SHP-LQS-3-TRU-5-TH-30ML-1-TN-06MG", "nome": "TJU - LIQ FB - Suculenta de Uva - 30 - 06mg/mL", "gtin": "5030004814148"}, {"sku": "SHP-LQS-3-TRU-6-TH-30ML-1-TN-00MG", "nome": "TJU - LIQ FB - Tabaco Mentolado - 30 - 00mg/mL", "gtin": "9060004816169"}, {"sku": "SHP-LQS-3-TRU-6-TH-30ML-1-TN-03MG", "nome": "TJU - LIQ FB - Tabaco Mentolado - 30 - 03mg/mL", "gtin": "7060004816161"}, {"sku": "SHP-LQS-3-TRU-6-TH-30ML-1-TN-06MG", "nome": "TJU - LIQ FB - Tabaco Mentolado - 30 - 06mg/mL", "gtin": "6060004816162"}, {"sku": "SWCDFLIQDL-00MG", "nome": "SNO - LIQ FB - Peach Lemonade - 30 - 00mg/mL", "gtin": "5087524169821"}, {"sku": "SWCDFLIQDL-03MG", "nome": "SNO - LIQ FB - Peach Lemonade - 30 - 03mg/mL", "gtin": "6982547826340"}, {"sku": "SWCDFLIQDL-3", "nome": "SNO - LIQ FB - Peach Lemonade - 30 - 06mg/mL", "gtin": "2976316485245"}, {"sku": "SWCDLIQMCR-00MG", "nome": "SNO - LIQ FB - Mellon Cooler - 30 - 00mg/mL", "gtin": "8792587413695"}, {"sku": "SWCDLIQMCR-03MG", "nome": "SNO - LIQ FB - Mellon Cooler - 30 - 03mg/mL", "gtin": "7854125897365"}, {"sku": "SWCDLIQMCR-3", "nome": "SNO - LIQ FB - Mellon Cooler - 30 - 06mg/mL", "gtin": "2976316485498"}, {"sku": "SWCDLIQSF-00MG", "nome": "SNO - LIQ FB - Sangria Frost - 30 - 00mg/mL", "gtin": "3687542198579"}, {"sku": "SWCDLIQSF-03MG", "nome": "SNO - LIQ FB - Sangria Frost - 30 - 03mg/mL", "gtin": "5874102578546"}, {"sku": "SWCDLIQSF-3", "nome": "SNO - LIQ FB - Sangria Frost - 30 - 06mg/mL", "gtin": "2976316485962"}, {"sku": "SWCFLIQBS-00MG", "nome": "SNO - LIQ FB - Berry Smoothie - 30 - 00mg/mL", "gtin": "7854369214560"}, {"sku": "SWCFLIQBS-03MG", "nome": "SNO - LIQ FB - Berry Smoothie - 30 - 03mg/mL", "gtin": "9087325814735"}, {"sku": "SWCFLIQDD-00MG", "nome": "SNO - LIQ FB - Pineapple Drink - 30 - 00mg/mL", "gtin": "8796582413087"}, {"sku": "SWCFLIQDD-03MG", "nome": "SNO - LIQ FB - Pineapple Drink - 30 - 03mg/mL", "gtin": "2587415689320"}, {"sku": "SWCFLIQDD-3", "nome": "SNO - LIQ FB - Pineapple Drink - 30 - 06mg/mL", "gtin": "2976316485641"}, {"sku": "TJNXW4M5U", "nome": "LVP - LIQ FB - Mel Mel", "gtin": "175432241939"}, {"sku": "TJNXW4M5U-1", "nome": "LVP - LIQ FB - Mel Mel - 30 - 06mg/mL", "gtin": "1733322419395"}, {"sku": "TJNXW4M5U-2", "nome": "LVP - LIQ FB - Mel Mel - 30 - 03mg/mL", "gtin": "1754322419390"}, {"sku": "TJNXW4M5U-3", "nome": "LVP - LIQ FB - Mel Mel - 30 - 00mg/mL", "gtin": "6943498682164"}, {"sku": "TWMRF3LFB-1", "nome": "LVP - LIQ FB - Strudel - 30 - 06mg/mL", "gtin": "3218615922014"}, {"sku": "TWMRF3LFB-2", "nome": "LVP - LIQ FB - Strudel - 30 - 00mg/mL", "gtin": "3218615920010"}, {"sku": "TWMRF3LFB-3", "nome": "LVP - LIQ FB - Strudel - 30 - 03mg/mL", "gtin": "2976316485818"}, {"sku": "UFPAYXHFQ-1", "nome": "LJU - LIQ FB - Dragomancia - 30 - 06mg/mL", "gtin": "3085898204126"}, {"sku": "UFPAYXHFQ-2", "nome": "LJU - LIQ FB - Dragomancia - 30 - 03mg/mL", "gtin": "3773898204122"}, {"sku": "UFPAYXHFQ-3", "nome": "LJU - LIQ FB - Dragomancia - 30 - 00mg/mL", "gtin": "3003898204120"}, {"sku": "VBB-JFB-BKI-1", "nome": "VB - LIQ FB - Black Ice - 30 - 00mg/mL", "gtin": "7893593287780"}, {"sku": "VBB-JFB-BKI-2", "nome": "VB - LIQ FB - Black Ice - 30 - 03mg/mL", "gtin": "7892665657360"}, {"sku": "VBB-JNS-TBC-1", "nome": "VB - LIQ NS - Tabaco - 30 - 35mg/mL", "gtin": "7895290657767"}, {"sku": "VBJFBHIC-1", "nome": "VB - LIQ FB - Hazelnut Ice Cream - 30 - 00mg/mL", "gtin": "2976316485283"}, {"sku": "VBJFBHIC-2", "nome": "VB - LIQ FB - Hazelnut Ice Cream - 30 - 03mg/mL", "gtin": "2976316485344"}, {"sku": "VBJFBHIC-3", "nome": "VB - LIQ FB - Hazelnut Ice Cream - 30 - 06mg/mL", "gtin": "2976316485764"}, {"sku": "VE7ZR4JMP-1", "nome": "LVP - LIQ FB - The Circus - 30 - 06mg/mL", "gtin": "2020300315725"}, {"sku": "VE7ZR4JMP-2", "nome": "LVP - LIQ FB - The Circus - 30 - 03mg/mL", "gtin": "2020300315732"}, {"sku": "VE7ZR4JMP-3", "nome": "LVP - LIQ FB - The Circus - 30 - 00mg/mL", "gtin": "2020300315749"}, {"sku": "VQB953PLG-1", "nome": "LJU - LIQ FB - Morango com Caramelo - 30 - 06mg/mL", "gtin": "3993003157321"}, {"sku": "VQB953PLG-2", "nome": "LJU - LIQ FB - Morango com Caramelo - 30 - 03mg/mL", "gtin": "3589358315730"}, {"sku": "VQB953PLG-3", "nome": "LJU - LIQ FB - Morango com Caramelo - 30 - 00mg/mL", "gtin": "3589300315733"}, {"sku": "VVC9WK2YW-1", "nome": "LJU - LIQ FB - Banana com Canela - 30 - 06mg/mL", "gtin": "9876543260123"}, {"sku": "VVC9WK2YW-2", "nome": "LJU - LIQ FB - Banana com Canela - 30 - 03mg/mL", "gtin": "9876543250124"}, {"sku": "VVC9WK2YW-3", "nome": "LJU - LIQ FB - Banana com Canela - 30 - 00mg/mL", "gtin": "9876543240125"}, {"sku": "YAVG2a143s521-1", "nome": "TJU - LIQ FB - Watermelon Day - 30 - 06mg/mL", "gtin": "8209850623328"}, {"sku": "YAVG2a143s521-2", "nome": "TJU - LIQ FB - Watermelon Day - 30 - 03mg/mL", "gtin": "8209850625520"}, {"sku": "YAVG2a143s521-3", "nome": "TJU - LIQ FB - Watermelon Day - 30 - 00mg/mL", "gtin": "8209850621126"}, {"sku": "ZP8YD8RDD", "nome": "LVP - LIQ FB - Pecan Pie", "gtin": "6921291309600"}, {"sku": "ZP8YD8RDD-1", "nome": "LVP - LIQ FB - Pecan Pie - 30 - 06mg/mL", "gtin": "2506291309603"}, {"sku": "ZP8YD8RDD-2", "nome": "LVP - LIQ FB - Pecan Pie - 30 - 00mg/mL", "gtin": "6921291309600"}, {"sku": "hbjf513FAVS-30-00mg", "nome": "TJU - LIQ FB - Ice Watermelon - 30 - 00mg/mL", "gtin": "8903903919023"}, {"sku": "hbjf513FAVS-30-03mg", "nome": "TJU - LIQ FB - Ice Watermelon - 30 - 03mg/mL", "gtin": "8906104919021"}, {"sku": "hbjf513FAVS-30-06mg", "nome": "TJU - LIQ FB - Ice Watermelon - 30 - 06mg/mL", "gtin": "8999903919026"}];
+const PADRAO = { cols:2, pw:102, ph:30, gap:2, mx:0, fs:8 };
+const CFG_IDS = Object.keys(PADRAO);
+const qtd = {};
+const $ = id => document.getElementById(id);
+const norm = s => (s || "").toString().normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+// Configuração da impressora fica salva no navegador do fornecedor.
+try { const s = JSON.parse(localStorage.getItem("etq_cfg") || "{}"); CFG_IDS.forEach(k => { if (s[k] != null) $(k).value = s[k]; }); } catch (e) {}
+function cfg() {
+  const c = {}; CFG_IDS.forEach(k => c[k] = parseFloat($(k).value) || 0);
+  c.cols = Math.max(1, Math.round(c.cols)); c.pw = c.pw || 102; c.ph = c.ph || 30; c.fs = c.fs || 8;
+  try { localStorage.setItem("etq_cfg", JSON.stringify(c)); } catch (e) {}
+  return c;
+}
+
+function listar() {
+  const termos = norm($("busca").value).split(/\s+/).filter(Boolean);
+  const achados = PRODUTOS.filter(p => {
+    const h = norm(p.nome + " " + p.sku + " " + p.gtin);
+    return termos.every(t => h.includes(t));
+  });
+  // Selecionados primeiro, pra não perder de vista o que já foi escolhido.
+  achados.sort((a, b) => (qtd[b.sku] ? 1 : 0) - (qtd[a.sku] ? 1 : 0));
+  const el = $("lista"); el.innerHTML = "";
+  if (!achados.length) { el.innerHTML = '<div class="vazio">Nenhum produto encontrado.</div>'; return; }
+  achados.slice(0, 300).forEach(p => {
+    const d = document.createElement("div");
+    d.className = "it" + (qtd[p.sku] ? " on" : "");
+    d.innerHTML = '<div class="n"></div><div class="s"></div><input type="number" min="0" placeholder="0">';
+    d.querySelector(".n").textContent = p.nome;
+    d.querySelector(".s").textContent = p.sku + " · " + p.gtin;
+    const inp = d.querySelector("input");
+    inp.value = qtd[p.sku] || "";
+    inp.oninput = () => {
+      const v = Math.max(0, parseInt(inp.value, 10) || 0);
+      if (v) qtd[p.sku] = v; else delete qtd[p.sku];
+      d.classList.toggle("on", !!v);
+      gerar();
+    };
+    el.appendChild(d);
+  });
+}
+
+function formato(gtin) {
+  if (/^\d{13}$/.test(gtin)) return "EAN13";
+  if (/^\d{8}$/.test(gtin)) return "EAN8";
+  if (/^\d{12}$/.test(gtin)) return "UPC";
+  return "CODE128";
+}
+
+function gerar() {
+  const c = cfg();
+  $("dyn").textContent = `@page { size:${c.pw}mm ${c.ph}mm; margin:0; }
+    .row { width:${c.pw}mm; height:${c.ph}mm; gap:${c.gap}mm; padding:0 ${c.mx}mm; }`;
+  const lista = [];
+  PRODUTOS.forEach(p => { for (let i = 0; i < (qtd[p.sku] || 0); i++) lista.push(p); });
+  $("tot").textContent = lista.length ? `${lista.length} etiqueta(s) · ${Math.ceil(lista.length / c.cols)} linha(s) de bobina` : "Nenhuma etiqueta";
+  const area = $("area"); area.innerHTML = "";
+  if (lista.length > 3000) { $("tot").textContent += " — máximo de 3000 por vez"; return; }
+  for (let i = 0; i < lista.length; i += c.cols) {
+    const row = document.createElement("div"); row.className = "row";
+    for (let j = 0; j < c.cols; j++) {
+      const cell = document.createElement("div"); cell.className = "cell";
+      const p = lista[i + j];
+      if (p) {
+        const nm = document.createElement("div"); nm.className = "nm"; nm.style.fontSize = c.fs + "pt"; nm.textContent = p.nome;
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        const cd = document.createElement("div"); cd.className = "cd"; cd.style.fontSize = Math.max(6, c.fs) + "pt"; cd.textContent = p.gtin;
+        cell.append(nm, svg, cd);
+        try {
+          JsBarcode(svg, p.gtin, { format: formato(p.gtin), displayValue:false, margin:0, width:2, height:40 });
+        } catch (e) {
+          try { JsBarcode(svg, p.gtin, { format:"CODE128", displayValue:false, margin:0, width:2, height:40 }); } catch (e2) { svg.remove(); }
+        }
+        if (svg.isConnected) { svg.style.height = (c.ph * 0.42) + "mm"; svg.setAttribute("preserveAspectRatio", "none"); svg.removeAttribute("height"); }
+      }
+      row.appendChild(cell);
+    }
+    area.appendChild(row);
+  }
+}
+
+$("busca").oninput = listar;
+CFG_IDS.forEach(k => $(k).oninput = gerar);
+$("reset").onclick = () => { CFG_IDS.forEach(k => $(k).value = PADRAO[k]); gerar(); };
+$("limpar").onclick = () => { Object.keys(qtd).forEach(k => delete qtd[k]); listar(); gerar(); };
+$("print").onclick = () => { gerar(); if (!$("area").children.length) { alert("Coloque a quantidade em pelo menos um produto."); return; } window.print(); };
+if (typeof JsBarcode === "undefined") alert("Não foi possível carregar o código de barras. Verifique a internet e recarregue a página.");
+listar(); gerar();
+</script>
+</body>
+</html>
